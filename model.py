@@ -5,20 +5,25 @@ import torch.nn.functional as F
 
 class Model(nn.Module):
 
-    def __init__(self, vocab_size=32768, embed_dim=512):
+    def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
+        self.pos_embedding = nn.Embedding(max_context, embed_dim)  # TODO: better positional markers (RoPE)
         self.lm_head = nn.Linear(embed_dim, vocab_size, bias=False)
         self.lm_head.weight = self.token_embedding.weight  # Tie weights
         self.transformer = Transformer(embed_dim=embed_dim)
         self.ln_f = nn.LayerNorm(embed_dim)
 
     def forward(self, x):
+        B, T = x.size()
         input_tokens = self.token_embedding(x)
-        # TODO: positional markers
-        output_tokens = self.ln_f(self.transformer(input_tokens))
-        logits = self.lm_head(output_tokens)
-        return logits
+        pos = self.pos_embedding(
+            torch.arange(T, device=x.device)
+        )
+        x = input_tokens + pos
+        x = self.transformer(x)
+        x = self.ln_f(x)
+        return self.lm_head(x)
 
 
 class Transformer(nn.Module):
