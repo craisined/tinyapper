@@ -8,7 +8,9 @@ class Model(nn.Module):
     def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
-        self.pos_embedding = nn.Embedding(max_context, embed_dim)  # TODO: better positional markers (RoPE)
+        self.pos_embedding = nn.Embedding(
+            max_context, embed_dim
+        )  # TODO: better positional markers (RoPE)
         self.lm_head = nn.Linear(embed_dim, vocab_size, bias=False)
         self.lm_head.weight = self.token_embedding.weight  # Tie weights
         self.transformer = Transformer(embed_dim=embed_dim)
@@ -17,9 +19,7 @@ class Model(nn.Module):
     def forward(self, x):
         B, T = x.size()
         input_tokens = self.token_embedding(x)
-        pos = self.pos_embedding(
-            torch.arange(T, device=x.device)
-        )
+        pos = self.pos_embedding(torch.arange(T, device=x.device))
         x = input_tokens + pos
         x = self.transformer(x)
         x = self.ln_f(x)
