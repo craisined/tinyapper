@@ -1,3 +1,4 @@
+import logging
 import torch
 import torch.nn
 import torch.nn.functional as F
@@ -6,6 +7,7 @@ from transformers import AutoTokenizer
 from model import Model
 from data import TextDataset
 
+logger = logging.getLogger(__name__)
 
 def train():
 
@@ -16,6 +18,8 @@ def train():
     batch_size = 8
     grad_accum_steps = 4
     epochs = 1
+
+    logging_rate = 200
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     raw_dataset = load_dataset("wikitext", "wikitext-103-raw-v1", split="train")
@@ -44,13 +48,29 @@ def train():
 
     for epoch in range(epochs):
         optimizer.zero_grad(set_to_none=True)
-        for x, y in dataloader:
+        accum_loss = 0
+        for step, (x, y) in enumerate(dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
                 logits = model(x)
                 loss = criterion(logits.view(-1, logits.size(-1)), y.view(-1))
                 loss = loss / grad_accum_steps
+            accum_loss += loss.item()
+            loss.backward()
+
+            if step % grad_accum_steps == grad_accum_steps - 1:
+                # TODO: gradient clipping
+                # TODO: variable learning
+                optimizer.step()
+            
+            if step % (logging_rate * grad_accum_steps) == grad_accum_steps - 1:
+                logger.info(f"Step {step} | Loss {accum_loss} ")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        filename="train.log",
+        filemode="a"
+    )
     train()
