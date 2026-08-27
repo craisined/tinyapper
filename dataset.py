@@ -1,8 +1,12 @@
+import logging
 import torch
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
+import transformers
 from transformers import AutoTokenizer
 
+logger = logging.getLogger(__name__)
+transformers.logging.set_verbosity_error()
 
 class TextDataset(Dataset):
 
@@ -12,11 +16,13 @@ class TextDataset(Dataset):
         self.samples = []
 
         all_tokens = []
-        for item in raw_dataset:
+        for idx, item in enumerate(raw_dataset):
+            if idx % 200_000 == 0:
+                logger.info(f"Loading sample number {idx}")
             text = item["text"]
             if not text.strip():
                 continue
-            tokens = tokenizer.encode(text, add_special_tokens=False)
+            tokens = tokenizer.encode(text, add_special_tokens=False, truncation=False)
             all_tokens.extend(tokens)
 
             chunk_size = seq_len + 1
