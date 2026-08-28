@@ -93,11 +93,10 @@ def train(config=None, **kwargs):
 
             if (
                 step % (config.logging_rate * config.grad_steps)
-                == config.grad_steps - 1
+                == config.logging_rate * config.grad_steps - 1
             ):
-                logger.info(f"Step {step} | Loss {accum_loss} ")
+                logger.info(f"Step: {step} | Loss per token: {accum_loss / config.logging_rate}")
                 accum_loss = 0
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="train.log", filemode="w")
