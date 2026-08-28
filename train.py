@@ -1,4 +1,5 @@
 from datasets import load_dataset
+from pathlib import Path
 import logging
 import torch
 import torch.nn as nn
@@ -19,6 +20,7 @@ def train(config=None, **kwargs):
     device = "cuda"
 
     config_defaults = {
+        "checkpoint_dir": "checkpoints",
         "context": 1024,
         "epochs": 1,
         "grad_norm": 1,
@@ -31,6 +33,9 @@ def train(config=None, **kwargs):
     if config is None:
         config = kwargs
     config = SimpleNamespace(**(config_defaults | config))
+
+    config.checkpoint_dir = Path(config.checkpoint_dir)
+    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
     raw_dataset = load_dataset(
@@ -50,11 +55,11 @@ def train(config=None, **kwargs):
     )
     logger.info("Loaded dataset!")
 
-    model = Model(
+    raw_model = Model(
         vocab_size=tokenizer.vocab_size,
         max_context=config.context,
     ).to(device)
-    model = torch.compile(model)
+    model = torch.compile(raw_model)
     logger.info("Loaded model!")
 
     param_dict = {pn: p for pn, p in model.named_parameters() if p.requires_grad}
@@ -95,8 +100,17 @@ def train(config=None, **kwargs):
                 step % (config.logging_rate * config.grad_steps)
                 == config.logging_rate * config.grad_steps - 1
             ):
-                logger.info(f"Step: {step} | Loss per token: {accum_loss / config.logging_rate}")
+                logger.info(f"Step: {step + 1} | Loss per token: {accum_loss / config.logging_rate}")
                 accum_loss = 0
+        
+        checkpoint = {
+            "epoch": epoch + 1,
+            "model_state": raw_model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+            "config": vars(config)
+        }
+        torch.save(checkpoint, config.checkpoint_dir / f"{epoch}.pt")
+        logger.info(f"Saved checkpoint for epoch {epoch + 1}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="train.log", filemode="w")
