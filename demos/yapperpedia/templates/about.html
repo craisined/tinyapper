@@ -1,0 +1,42 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>about ⓨ🅐ⓟ🅟ⓔ🅡ⓟ🅔ⓓ🅘ⓐ</title>
+</head>
+
+<body>
+    <nav>
+        <a class="article-logo" href="/">yapperpedia</a>
+        <search class="article-search">
+            <form action="/search" method="get">
+                <input type="search" name="query" placeholder="hallucinate anything..." required /><button
+                    type="submit"><i class="bi bi-search"></i></button>
+            </form>
+        </search>
+    </nav>
+    <div class="article-content-container">
+        <h2>about yapperpedia</h2>
+        <hr>
+        <h3>tinyapper</h3>
+        <hr>
+        <p>llms are too locked in... they require too much compute and everything is closed source and behind so much
+            math... so i made one from scratch! yapperpedia is a demo for tinyapper, an open source llm project made
+            using pytorch that is meant to be tinkered with. this demo uses a pretrained 50M parameter transformer to
+            generate wikipedia-esque pages... mostly because i haven't tuned tinyapper to do anything else yet. have
+            fun!</p>
+        <p>if anybody would like to tune tinyapper, optimize it (kv caches particularly appreciated), or tinker around
+            with tinyapper please head to <a href="https://github.com/craisined/tinyapper">the repo</a>. this project
+            was also submitted to hackclub's stardance, support on github and stardance is much appreciated <3 </p>
+        <h3>ai: absent intelligence</h3>
+        <hr>
+        <p>artificial intelligence systems are cool, but they can't stack up against my absent intelligence
+            system
+            (known as my brain). i highly encourage anybody interested to learn more about it at <a
+                href="https://craisin.tech">craisin.tech</a></p>
+    </div>
+    <h1></h1>
+</body>
+
+</html>

@@ -4,15 +4,8 @@
 body {
     font-family: "Comic Relief", sans-serif;
     font-weight: 400;
-    font-size: 2rem;
-}
-
-input {
-    font-family: "Comic Relief", sans-serif;
-}
-
-button {
-    font-family: "Comic Relief", sans-serif;
+    font-size: 1.5rem;
+    margin: 0;
 }
 
 h1 {
@@ -21,8 +14,50 @@ h1 {
     margin: 0.25rem;
 }
 
+h2, h3, h4, h5, h6 {
+    font-family: 'Barrio', system-ui;
+    margin-bottom: 0.25rem;
+}
+
 p {
     margin: 0.25rem;
+}
+
+input {
+    font-family: "Comic Relief", sans-serif;
+    font-size: 1em;
+    margin: 0;
+    border-radius: 0;
+    border-style: none;
+    background-color: transparent;
+}
+
+input:focus {
+    outline: none;
+}
+
+button {
+    font-family: "Comic Relief", sans-serif;
+    font-size: 1em;
+    margin: 0;
+    border-radius: 0;
+    border-style: none;
+    background-color: transparent;
+}
+
+form {
+    margin: 0;
+}
+
+search {
+    border-style: solid;
+    display: inline-block;
+    text-align: center;
+}
+
+nav {
+    display: flex;
+    align-items: center;
 }
 
 .front-page-container {
@@ -38,23 +73,26 @@ p {
 
 .front-page-search {
     margin: 3rem;
-    border-style: solid;
+    font-size: 3rem;
 }
 
-.front-page-search > input {
-    font-size: 1.5em;
-    margin: 0;
-    border-radius: 0;
-    border-style: none;
-}
-
-.front-page-search > button {
-    font-size: 1.5em;
-    margin: 0;
-    border-radius: 0;
-    border-style: none;
+.article-search {
+    margin: 1rem;
 }
 
 .link-container {
     margin-top: 2rem;
+}
+
+.article-logo {
+    font-family: 'Barrio', system-ui;
+    font-size: 3rem;
+    flex: 1;
+    text-decoration: none;
+    color: black;
+    margin: 1rem;
+}
+
+.article-content-container {
+    margin: 1em;
 }

@@ -1,7 +1,22 @@
 <html>
-    <head>
-    </head>
-    <body>
 
-    </body>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>ⓨ🅐ⓟ🅟ⓔ🅡ⓟ🅔ⓓ🅘ⓐ</title>
+</head>
+
+<body>
+    <nav>
+        <a class="article-logo" href="/">yapperpedia</a>
+        <search class="article-search">
+            <form action="/search" method="get">
+                <input type="search" name="query" placeholder="hallucinate anything..." required /><button
+                    type="submit"><i class="bi bi-search"></i></button>
+            </form>
+        </search>
+    </nav>
+    <h1></h1>
+</body>
+
 </html>
