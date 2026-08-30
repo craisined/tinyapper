@@ -86,7 +86,7 @@ class SelfAttention(nn.Module):
         k = k.view(B, T, self.num_heads, head_dim).transpose(1, 2)
         v = v.view(B, T, self.num_heads, head_dim).transpose(1, 2)
 
-        attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+        attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=True if T > 1 else False)
 
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(attn_out)
@@ -106,3 +106,7 @@ class FeedForwardNetwork(nn.Module):
 
     def forward(self, x):
         return self.ffn(x)
+
+# TODO: implement non exploding KV cache
+class KVCache:
+    pass
