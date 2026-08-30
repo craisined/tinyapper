@@ -8,7 +8,7 @@ PORT = 8000
 def index():
     return render_template("index.html")
 
-@app.route("/article")
+@app.route("/search")
 def article():
     return render_template("article.html")
 

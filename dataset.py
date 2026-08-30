@@ -8,6 +8,7 @@ from transformers import AutoTokenizer
 logger = logging.getLogger(__name__)
 transformers.logging.set_verbosity_error()
 
+#TODO: fix eos implementation
 class TextDataset(Dataset):
 
     def __init__(self, raw_dataset, tokenizer, seq_len=1024):
