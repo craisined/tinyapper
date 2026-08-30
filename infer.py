@@ -31,14 +31,14 @@ def load_model(checkpoint_path):
 
 
 @torch.no_grad()
-def run_model(input_text, checkpoint_path, config=None, **kwargs):
+def run_model(input_text, loaded_model, config=None, **kwargs):
 
     config_defaults = {"max_tokens": 100, "temperature": 0.8, "top_k": 40}
     if config is None:
         config = kwargs
     config = SimpleNamespace(**(config_defaults | config))
 
-    model, model_config = load_model(checkpoint_path)
+    model, model_config = loaded_model
 
     tokens = tokenizer.encode(input_text, truncation=True, return_tensors="pt").to(
         device
@@ -70,5 +70,5 @@ if __name__ == "__main__":
     checkpoint_file = "0.pt"
     prompt = input("Enter prompt: ")
     if prompt:
-        output = run_model(prompt, checkpoint_dir / checkpoint_file, max_tokens=1000)
+        output = run_model(prompt, load_model(checkpoint_dir / checkpoint_file) , max_tokens=1000)
         print(output)
