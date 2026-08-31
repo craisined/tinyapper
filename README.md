@@ -28,7 +28,9 @@ curl -o static/yapperpedia.pt https://yapperpedia.craisin.tech/static/yapperpedi
 python3 app.py
 ```
 
-### Docker Hosting
+### Docker Hosting 🐋
+
+This is still basically disfunctional without gpu, since KV cache hasn't been implemented yet. A container of the demo is published at `ghcr.io/craisined/tinyapper` for those with GPU access.
 
 ### Raw Inference / Training 🏋️
 
