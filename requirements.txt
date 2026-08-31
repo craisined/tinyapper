@@ -1,0 +1,4 @@
+Flask==3.13
+jupyter==1.1.1
+torch==2.13 # Choose the correct torch
+transformers==5.15.1

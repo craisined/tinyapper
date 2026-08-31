@@ -33,7 +33,11 @@ def load_model(checkpoint_path):
 @torch.no_grad()
 def run_model(input_text, loaded_model, config=None, **kwargs):
 
-    config_defaults = {"max_tokens": 100, "temperature": 0.8, "top_k": 40}
+    config_defaults = {
+        "max_tokens": 100,
+        "temperature": 0.8,
+        "top_k": 40,
+    }
     if config is None:
         config = kwargs
     config = SimpleNamespace(**(config_defaults | config))
@@ -47,7 +51,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
         tokens = tokens[:, -model_config.context :]
 
-        with torch.amp.autocast(device_type=device, dtype=torch.bfloat16):
+        with torch.amp.autocast(device_type=device, dtype=torch.bfloat16, enabled=(device == 'cuda')):
             logits = model(tokens)[:, -1, :]
         logits = logits / max(config.temperature, 1e-5)
 
@@ -70,5 +74,7 @@ if __name__ == "__main__":
     checkpoint_file = "0.pt"
     prompt = input("Enter prompt: ")
     if prompt:
-        output = run_model(prompt, load_model(checkpoint_dir / checkpoint_file) , max_tokens=1000)
+        output = run_model(
+            prompt, load_model(checkpoint_dir / checkpoint_file), max_tokens=1000
+        )
         print(output)

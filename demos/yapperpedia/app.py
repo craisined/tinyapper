@@ -11,7 +11,7 @@ app = Flask(__name__)
 HOST = "0.0.0.0"
 PORT = 8000
 
-model = load_model(current_dir / "yapperpedia.pt")
+model = load_model(current_dir / "static" / "yapperpedia.pt")
 
 
 @app.route("/")
@@ -27,7 +27,7 @@ def article():
     article = run_model(f"= {topic} =\n", model, max_tokens=512)
     print(article)
     article = wikitext_to_html(article).lower()
-    return render_template("article.html", page_content=article)
+    return render_template("article.html", title=topic.lower(), page_content=article)
 
 
 @app.route("/about")
