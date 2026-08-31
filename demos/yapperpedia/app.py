@@ -25,7 +25,6 @@ def article():
     if topic is None:
         return redirect(url_for("index"))
     article = run_model(f"= {topic} =\n", model, max_tokens=512)
-    print(article)
     article = wikitext_to_html(article).lower()
     return render_template("article.html", title=topic.lower(), page_content=article)
 

@@ -28,6 +28,8 @@ curl -o static/yapperpedia.pt https://yapperpedia.craisin.tech/static/yapperpedi
 python3 app.py
 ```
 
+### Docker Hosting
+
 ### Raw Inference / Training 🏋️
 
 For local training / inference, start with [local.ipynb](local.ipynb). If more flexibility is desired, take a gander through [infer.py](infer.py) and [train.py](train.py). Finally, all model architecture stuff is in [model.py](model.py). Enjoy!
@@ -43,7 +45,7 @@ GPT-2s tokenizer was used for tokenization, and AdamW was used for optimization.
 
 [Wikitext-103-raw-v1](https://huggingface.co/datasets/Salesforce/wikitext) was used as a dataset.
 
-# Extra Stuffs
+## Extra Stuffs
 
 - AI usage was kept to research, debugging, and boilerplate code, as I am trying to work on my Actual Intellegence. An exception was made for RegEx parsing because RegEx stinks
 - Pull requests are appreciated if you ever improve on this!
