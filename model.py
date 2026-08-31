@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchtune.modules import RotaryPositionalEmbeddings
 
 
 class Model(nn.Module):
@@ -8,9 +9,6 @@ class Model(nn.Module):
     def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
-        self.pos_embedding = nn.Embedding(
-            max_context, embed_dim
-        )  # TODO: better positional markers (RoPE)
         self.lm_head = nn.Linear(embed_dim, vocab_size, bias=False)
         self.lm_head.weight = self.token_embedding.weight  # Tie weights
         self.transformer = Transformer(embed_dim=embed_dim)
@@ -27,9 +25,7 @@ class Model(nn.Module):
 
     def forward(self, x):
         B, T = x.size()
-        input_tokens = self.token_embedding(x)
-        pos = self.pos_embedding(torch.arange(T, device=x.device))
-        x = input_tokens + pos
+        x = self.token_embedding(x)
         x = self.transformer(x)
         x = self.ln_f(x)
         return self.lm_head(x)
@@ -43,7 +39,7 @@ class Transformer(nn.Module):
             TransformerBlock(embed_dim=embed_dim, num_heads=num_heads)
             for _ in range(layers)
         ]
-        self.model = nn.Sequential(*layers)
+        self.model = nn.Sequential(*layers) # TODO: switch off sequential
 
     def forward(self, x):
         return self.model(x)
@@ -67,26 +63,39 @@ class TransformerBlock(nn.Module):
 
 class SelfAttention(nn.Module):
 
-    def __init__(self, embed_dim, num_heads):
+    def __init__(self, embed_dim, num_heads, max_context=1024):
         super().__init__()
 
         self.num_heads = num_heads
         self.qkv_proj = nn.Linear(embed_dim, embed_dim * 3)
         self.out_proj = nn.Linear(embed_dim, embed_dim)
+        self.head_dim = embed_dim // num_heads
+        self.rope = RotaryPositionalEmbeddings(
+            dim=self.head_dim, max_seq_len=max_context, base=10000
+        )
 
-    def forward(self, x):
+    def forward(self, x, input_pos=None):
         B, T, C = x.size()
 
         # Equivalent to running x through 3 linear layers
         qkv = self.qkv_proj(x)
         q, k, v = qkv.chunk(3, dim=-1)
 
-        head_dim = C // self.num_heads
-        q = q.view(B, T, self.num_heads, head_dim).transpose(1, 2)
-        k = k.view(B, T, self.num_heads, head_dim).transpose(1, 2)
-        v = v.view(B, T, self.num_heads, head_dim).transpose(1, 2)
+        q = q.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
-        attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=True if T > 1 else False)
+        if input_pos is None:
+            input_pos = torch.arange(0, T, device=x.device)
+
+        q = self.rope(q, input_pos=input_pos)
+        k = self.rope(k, input_pos=input_pos)
+
+        # TODO: add KV cache
+
+        attn_out = F.scaled_dot_product_attention(
+            q, k, v, is_causal=(T > 1) # TODO: fix causal condition
+        )
 
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(attn_out)
@@ -106,6 +115,7 @@ class FeedForwardNetwork(nn.Module):
 
     def forward(self, x):
         return self.ffn(x)
+
 
 # TODO: implement non exploding KV cache
 class KVCache:
