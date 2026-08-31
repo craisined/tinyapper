@@ -50,7 +50,7 @@ class TransformerBlock(nn.Module):
     def __init__(self, embed_dim, num_heads):
         super().__init__()
 
-        self.attn = SelfAttention(embed_dim=embed_dim, num_heads=num_heads)
+        self.attn = SelfAttention(embed_dim=embed_dim, num_heads=num_heads) # TODO: replace with torch
         self.ffn = FeedForwardNetwork(embed_dim=embed_dim)
         self.ln1 = nn.LayerNorm(embed_dim)
         self.ln2 = nn.LayerNorm(embed_dim)
@@ -74,7 +74,7 @@ class SelfAttention(nn.Module):
             dim=self.head_dim, max_seq_len=max_context, base=10000
         )
 
-    def forward(self, x, input_pos=None):
+    def forward(self, x, start_pos=0, cache=None):
         B, T, C = x.size()
 
         # Equivalent to running x through 3 linear layers
@@ -85,13 +85,13 @@ class SelfAttention(nn.Module):
         k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
-        if input_pos is None:
-            input_pos = torch.arange(0, T, device=x.device)
+        input_pos = torch.arange(start_pos, start_pos + T, device=x.device)
 
         q = self.rope(q, input_pos=input_pos)
         k = self.rope(k, input_pos=input_pos)
 
-        # TODO: add KV cache
+        if cache is not None:
+            k, v = cache.push(k, v)
 
         attn_out = F.scaled_dot_product_attention(
             q, k, v, is_causal=(T > 1) # TODO: fix causal condition
@@ -119,4 +119,22 @@ class FeedForwardNetwork(nn.Module):
 
 # TODO: implement non exploding KV cache
 class KVCache:
-    pass
+    
+    def __init__(self, batches, max_context, num_heads, head_dim, dtype=torch.bfloat16):
+        shape = (batches, max_context, num_heads, head_dim)
+        self.max_context = max_context
+        # TODO: Register buffer
+        self.k_cache = torch.empty(shape, dtype=dtype)
+        self.v_cache = torch.empty(shape, dtype=dtype)
+        self.total = 0
+
+    def push(self, k, v):
+        self.total += 1
+        ptr = total % self.max_context
+        self.k_cache[ptr], self.v_cache[ptr] = k, v
+        if total < self.max_context:
+            return self.k_cache[:, :total], self.v_cache[:, :total]
+        return self.k_cache, self.v_cache
+
+    def reset(self):
+        self.total = 0
