@@ -39,7 +39,7 @@ class Transformer(nn.Module):
             TransformerBlock(embed_dim=embed_dim, num_heads=num_heads)
             for _ in range(layers)
         ]
-        self.model = nn.Sequential(*layers) # TODO: switch off sequential
+        self.model = nn.Sequential(*layers)  # TODO: switch off sequential
 
     def forward(self, x):
         return self.model(x)
@@ -50,7 +50,9 @@ class TransformerBlock(nn.Module):
     def __init__(self, embed_dim, num_heads):
         super().__init__()
 
-        self.attn = SelfAttention(embed_dim=embed_dim, num_heads=num_heads) # TODO: replace with torch
+        self.attn = SelfAttention(
+            embed_dim=embed_dim, num_heads=num_heads
+        )  # TODO: replace with torch
         self.ffn = FeedForwardNetwork(embed_dim=embed_dim)
         self.ln1 = nn.LayerNorm(embed_dim)
         self.ln2 = nn.LayerNorm(embed_dim)
@@ -75,6 +77,7 @@ class SelfAttention(nn.Module):
         )
 
     def forward(self, x, start_pos=0, cache=None):
+
         B, T, C = x.size()
 
         # Equivalent to running x through 3 linear layers
@@ -93,12 +96,13 @@ class SelfAttention(nn.Module):
         if cache is not None:
             k, v = cache.push(k, v)
 
-        attn_out = F.scaled_dot_product_attention(
-            q, k, v, is_causal=(T > 1) # TODO: fix causal condition
-        )
+        attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=bool(cache))
 
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(attn_out)
+
+    def reset(self):
+        self.kv_cache.reset()
 
 
 class FeedForwardNetwork(nn.Module):
@@ -117,24 +121,37 @@ class FeedForwardNetwork(nn.Module):
         return self.ffn(x)
 
 
-# TODO: implement non exploding KV cache
-class KVCache:
-    
-    def __init__(self, batches, max_context, num_heads, head_dim, dtype=torch.bfloat16):
-        shape = (batches, max_context, num_heads, head_dim)
-        self.max_context = max_context
-        # TODO: Register buffer
-        self.k_cache = torch.empty(shape, dtype=dtype)
-        self.v_cache = torch.empty(shape, dtype=dtype)
-        self.total = 0
+class KVCache(nn.Module):
 
-    def push(self, k, v):
-        self.total += 1
-        ptr = total % self.max_context
-        self.k_cache[ptr], self.v_cache[ptr] = k, v
-        if total < self.max_context:
-            return self.k_cache[:, :total], self.v_cache[:, :total]
-        return self.k_cache, self.v_cache
+    def __init__(self, batches, max_context, num_heads, head_dim):
+        super().__init__()
+        shape = (batches, num_heads, max_context, head_dim)
+        self.max_context = max_context
+        self.register_buffer("k_cache", torch.zeros(shape), persistent=False)
+        self.register_buffer("v_cache", torch.zeros(shape), persistent=False)
+
+    def push(self, k, v, start_pos):
+
+        k = k.to(self.k_cache.dtype)
+        v = v.to(self.v_cache.dtype)
+        tokens = k.shape[2]
+
+        input_pos = torch.arange(start_pos, start_pos + tokens, device=k.device)
+        ptr = input_pos % self.max_context
+        self.k_cache[:, :, ptr] = k
+        self.v_cache[:, :, ptr] = v
+        return self.unroll(start_pos + tokens)
+
+    def unroll(self, total_tokens):
+        k_unrolled = self.k_cache
+        v_unrolled = self.v_cache
+        if total_tokens > self.max_context:
+            shift = -(total_tokens % self.max_context)
+            k_unrolled = torch.roll(self.k_cache, shifts=shift, dims=2)
+            v_unrolled = torch.roll(self.v_cache, shifts=shift, dims=2)
+        cache_len = min(total_tokens, self.max_context)
+        return k_unrolled[:, :, :cache_len], v_unrolled[:, :, :cache_len]
 
     def reset(self):
-        self.total = 0
+        self.k_cache.zero_()
+        self.v_cache.zero_()
