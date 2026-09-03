@@ -9,6 +9,9 @@ class Model(nn.Module):
     def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
+        self.pos_embedding = nn.Embedding(
+            max_context, embed_dim
+        )
         self.lm_head = nn.Linear(embed_dim, vocab_size, bias=False)
         self.lm_head.weight = self.token_embedding.weight  # Tie weights
         self.transformer = Transformer(embed_dim=embed_dim)
@@ -25,7 +28,9 @@ class Model(nn.Module):
 
     def forward(self, x):
         B, T = x.size()
-        x = self.token_embedding(x)
+        input_tokens = self.token_embedding(x)
+        pos = self.pos_embedding(torch.arange(T, device=x.device))
+        x = input_tokens + pos
         x = self.transformer(x)
         x = self.ln_f(x)
         return self.lm_head(x)
@@ -50,15 +55,13 @@ class TransformerBlock(nn.Module):
     def __init__(self, embed_dim, num_heads):
         super().__init__()
 
-        self.attn = SelfAttention(
-            embed_dim=embed_dim, num_heads=num_heads
-        )  # TODO: replace with torch
+        self.attn = SelfAttention(embed_dim=embed_dim, num_heads=num_heads)
         self.ffn = FeedForwardNetwork(embed_dim=embed_dim)
         self.ln1 = nn.LayerNorm(embed_dim)
         self.ln2 = nn.LayerNorm(embed_dim)
 
-    def forward(self, x):
-        x = x + self.attn(self.ln1(x))
+    def forward(self, x, cache=None):
+        x = x + self.attn(self.ln1(x), cache=cache)
         x = x + self.ffn(self.ln2(x))
         return x
 
@@ -72,11 +75,9 @@ class SelfAttention(nn.Module):
         self.qkv_proj = nn.Linear(embed_dim, embed_dim * 3)
         self.out_proj = nn.Linear(embed_dim, embed_dim)
         self.head_dim = embed_dim // num_heads
-        self.rope = RotaryPositionalEmbeddings(
-            dim=self.head_dim, max_seq_len=max_context, base=10000
-        )
+        self.max_context = max_context
 
-    def forward(self, x, start_pos=0, cache=None):
+    def forward(self, x, cache=None):
 
         B, T, C = x.size()
 
@@ -88,21 +89,21 @@ class SelfAttention(nn.Module):
         k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
-        input_pos = torch.arange(start_pos, start_pos + T, device=x.device)
-
-        q = self.rope(q, input_pos=input_pos)
-        k = self.rope(k, input_pos=input_pos)
+        prior_tokens = 0 if cache is None else cache.total_tokens
+        if prior_tokens + T > self.max_context:
+            raise ValueError(
+                f"{prior_tokens + T} tokens exceed the current conext window"
+            )
 
         if cache is not None:
             k, v = cache.push(k, v)
 
-        attn_out = F.scaled_dot_product_attention(q, k, v, is_causal=bool(cache))
+        attn_out = F.scaled_dot_product_attention(
+            q, k, v, is_causal=(T > 1)
+        )  # TODO: custom mask for multiple fills
 
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(attn_out)
-
-    def reset(self):
-        self.kv_cache.reset()
 
 
 class FeedForwardNetwork(nn.Module):
@@ -127,31 +128,26 @@ class KVCache(nn.Module):
         super().__init__()
         shape = (batches, num_heads, max_context, head_dim)
         self.max_context = max_context
+        self.total_tokens = 0
         self.register_buffer("k_cache", torch.zeros(shape), persistent=False)
         self.register_buffer("v_cache", torch.zeros(shape), persistent=False)
 
-    def push(self, k, v, start_pos):
+    def push(self, k, v):
 
         k = k.to(self.k_cache.dtype)
         v = v.to(self.v_cache.dtype)
         tokens = k.shape[2]
 
-        input_pos = torch.arange(start_pos, start_pos + tokens, device=k.device)
-        ptr = input_pos % self.max_context
-        self.k_cache[:, :, ptr] = k
-        self.v_cache[:, :, ptr] = v
-        return self.unroll(start_pos + tokens)
-
-    def unroll(self, total_tokens):
-        k_unrolled = self.k_cache
-        v_unrolled = self.v_cache
-        if total_tokens > self.max_context:
-            shift = -(total_tokens % self.max_context)
-            k_unrolled = torch.roll(self.k_cache, shifts=shift, dims=2)
-            v_unrolled = torch.roll(self.v_cache, shifts=shift, dims=2)
-        cache_len = min(total_tokens, self.max_context)
-        return k_unrolled[:, :, :cache_len], v_unrolled[:, :, :cache_len]
+        end_idx = self.total_tokens + tokens
+        self.k_cache[:, :, self.total_tokens : end_idx] = k
+        self.v_cache[:, :, self.total_tokens : end_idx] = v
+        self.total_tokens += tokens
+        return (
+            self.k_cache[:, :, : self.total_tokens],
+            self.v_cache[:, :, : self.total_tokens],
+        )
 
     def reset(self):
+        self.total_tokens = 0
         self.k_cache.zero_()
         self.v_cache.zero_()
