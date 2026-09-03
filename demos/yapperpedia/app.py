@@ -19,12 +19,13 @@ def index():
     return render_template("index.html")
 
 
+# TODO: switch to streaming output
 @app.route("/search", methods=["GET"])
 def article():
     topic = request.args.get("query", default=None, type=str)
     if topic is None:
         return redirect(url_for("index"))
-    article = run_model(f"= {topic} =\n", model, max_tokens=256)
+    article = run_model(f"= {topic.lower()} =\n", model, max_tokens=128)
     article = wikitext_to_html(article).lower()
     return render_template("article.html", title=topic.lower(), page_content=article)
 

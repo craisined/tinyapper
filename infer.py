@@ -10,7 +10,8 @@ from model import Model
 
 logger = logging.getLogger(__name__)
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+#device = "cuda" if torch.cuda.is_available() else "cpu"
+device="cpu"
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 tokenizer.truncation_side = "left"
 
@@ -53,7 +54,8 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
     config = SimpleNamespace(**(config_defaults | config))
 
     model, model_config = loaded_model
-    caches = model.create_kv_caches(batches=1)
+    cache_dtype = torch.bfloat16 if device == "cuda" else torch.float32
+    caches = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
 
     input_tokens = tokenizer.encode(input_text, truncation=True, return_tensors="pt").to(
         device
@@ -61,7 +63,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
     output_tokens = []
     
     for _ in range(config.max_tokens):
-
+    
         is_cuda = device == "cuda"
         with torch.amp.autocast(
             device_type=device, dtype=torch.bfloat16, enabled=is_cuda
@@ -81,15 +83,15 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
         input_tokens = next_token.view(1, 1)
 
-    return tokenizer.decode(output_tokens)
+    return input_text + tokenizer.decode(output_tokens)
 
 
 if __name__ == "__main__":
     checkpoint_dir = Path("checkpoints")
     checkpoint_file = "0.pt"
-    # model = load_model(checkpoint_dir / checkpoint_file)
+    model = load_model(checkpoint_dir / checkpoint_file)
     # model = load_quantized_model(checkpoint_dir / checkpoint_file)
     prompt = input("Enter prompt: ")
     if prompt:
-        output = run_model(prompt, model, max_tokens=256)
+        output = run_model(prompt, model, max_tokens=100)
         print(output)

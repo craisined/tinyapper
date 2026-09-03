@@ -43,16 +43,20 @@ class Model(nn.Module):
         x = self.ln_f(x)
         return self.lm_head(x)
 
-    def create_kv_caches(self, batches):
+    def create_kv_caches(self, batches, dtype=torch.bfloat16, device=None):
         num_heads = 8  # TODO: flexibility for different architecture
         layers = 12
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         caches = [
             KVCache(
                 batches=batches,
                 max_context=self.max_context,
                 num_heads=num_heads,
                 head_dim=self.embed_dim // num_heads,
-            ) for _ in range(layers)
+                dtype=dtype,
+            ).to(device)
+            for _ in range(layers)
         ]
         return caches
 
@@ -142,20 +146,21 @@ class FeedForwardNetwork(nn.Module):
 
 class KVCache(nn.Module):
 
-    def __init__(self, batches, max_context, num_heads, head_dim):
+    def __init__(self, batches, max_context, num_heads, head_dim, dtype):
         super().__init__()
         shape = (batches, num_heads, max_context, head_dim)
         self.max_context = max_context
         self.total_tokens = 0
-        self.register_buffer("k_cache", torch.zeros(shape), persistent=False)
-        self.register_buffer("v_cache", torch.zeros(shape), persistent=False)
+        self.register_buffer(
+            "k_cache", torch.zeros(shape, dtype=dtype), persistent=False
+        )
+        self.register_buffer(
+            "v_cache", torch.zeros(shape, dtype=dtype), persistent=False
+        )
 
     def push(self, k, v):
 
-        k = k.to(self.k_cache.dtype)
-        v = v.to(self.v_cache.dtype)
         tokens = k.shape[2]
-
         end_idx = self.total_tokens + tokens
         self.k_cache[:, :, self.total_tokens : end_idx] = k
         self.v_cache[:, :, self.total_tokens : end_idx] = v
