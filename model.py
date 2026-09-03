@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchtune.modules import RotaryPositionalEmbeddings
 
 
 class Model(nn.Module):
 
     def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
+        self.max_context = max_context
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
         self.pos_embedding = nn.Embedding(
             max_context, embed_dim
@@ -26,12 +26,19 @@ class Model(nn.Module):
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, x):
+    def forward(self, x, caches=None):
         B, T = x.size()
+
+        prior_tokens = 0 if caches is None else caches[0].total_tokens
+        if prior_tokens + T > self.max_context:
+            raise ValueError(
+                f"{prior_tokens + T} tokens exceed the current conext window"
+            )
+
         input_tokens = self.token_embedding(x)
-        pos = self.pos_embedding(torch.arange(T, device=x.device))
+        pos = self.pos_embedding(torch.arange(prior_tokens, prior_tokens + T, device=x.device))
         x = input_tokens + pos
-        x = self.transformer(x)
+        x = self.transformer(x, caches=caches)
         x = self.ln_f(x)
         return self.lm_head(x)
 
@@ -44,10 +51,13 @@ class Transformer(nn.Module):
             TransformerBlock(embed_dim=embed_dim, num_heads=num_heads)
             for _ in range(layers)
         ]
-        self.model = nn.Sequential(*layers)  # TODO: switch off sequential
+        self.model = nn.ModuleList(layers)
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, caches=None):
+        for i, layer in enumerate(self.model):
+            cache = caches[i] if caches is not None else None
+            x = layer(x, cache=cache)
+        return x
 
 
 class TransformerBlock(nn.Module):
@@ -88,12 +98,6 @@ class SelfAttention(nn.Module):
         q = q.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
-
-        prior_tokens = 0 if cache is None else cache.total_tokens
-        if prior_tokens + T > self.max_context:
-            raise ValueError(
-                f"{prior_tokens + T} tokens exceed the current conext window"
-            )
 
         if cache is not None:
             k, v = cache.push(k, v)
