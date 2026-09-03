@@ -10,8 +10,7 @@ from model import Model
 
 logger = logging.getLogger(__name__)
 
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-device = "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 tokenizer.truncation_side = "left"
 
@@ -44,7 +43,7 @@ def load_quantized_model(checkpoint_path):
 def run_model(input_text, loaded_model, config=None, **kwargs):
 
     config_defaults = {
-        "max_tokens": 100,
+        "max_tokens": 1024,
         "temperature": 0.8,
         "top_k": 40,
     }
@@ -53,13 +52,12 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
     config = SimpleNamespace(**(config_defaults | config))
 
     model, model_config = loaded_model
+    caches = model.create_kv_caches(batches=1)
 
     tokens = tokenizer.encode(input_text, truncation=True, return_tensors="pt").to(
         device
     )
     for _ in range(config.max_tokens):
-
-        tokens = tokens[:, -model_config.context :]
 
         is_cuda = device == "cuda"
         with torch.amp.autocast(
@@ -77,7 +75,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
         if next_token.item() == tokenizer.eos_token_id:
             break
 
-        tokens = torch.cat((tokens, next_token), dim=1)
+        tokens = next_token
 
     return tokenizer.decode(tokens[0].tolist())
 
@@ -89,5 +87,5 @@ if __name__ == "__main__":
     # model = load_quantized_model(checkpoint_dir / checkpoint_file)
     prompt = input("Enter prompt: ")
     if prompt:
-        output = run_model(prompt, model, max_tokens=100)
+        output = run_model(prompt, model, max_tokens=1024)
         print(output)

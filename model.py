@@ -8,10 +8,9 @@ class Model(nn.Module):
     def __init__(self, vocab_size=32768, embed_dim=512, max_context=1024):
         super().__init__()
         self.max_context = max_context
+        self.embed_dim = embed_dim
         self.token_embedding = nn.Embedding(vocab_size, embed_dim)
-        self.pos_embedding = nn.Embedding(
-            max_context, embed_dim
-        )
+        self.pos_embedding = nn.Embedding(max_context, embed_dim)
         self.lm_head = nn.Linear(embed_dim, vocab_size, bias=False)
         self.lm_head.weight = self.token_embedding.weight  # Tie weights
         self.transformer = Transformer(embed_dim=embed_dim)
@@ -36,11 +35,26 @@ class Model(nn.Module):
             )
 
         input_tokens = self.token_embedding(x)
-        pos = self.pos_embedding(torch.arange(prior_tokens, prior_tokens + T, device=x.device))
+        pos = self.pos_embedding(
+            torch.arange(prior_tokens, prior_tokens + T, device=x.device)
+        )
         x = input_tokens + pos
         x = self.transformer(x, caches=caches)
         x = self.ln_f(x)
         return self.lm_head(x)
+
+    def create_kv_caches(self, batches):
+        num_heads = 8  # TODO: flexibility for different architecture
+        layers = 12
+        caches = [
+            KVCache(
+                batches=batches,
+                max_context=self.max_context,
+                num_heads=num_heads,
+                head_dim=embed_dim // num_heads,
+            ) for _ in range(layers)
+        ]
+        return caches
 
 
 class Transformer(nn.Module):
