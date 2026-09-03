@@ -30,6 +30,7 @@ def load_model(checkpoint_path):
     return model, config
 
 
+# TODO: migrate from torch.ao.quantization
 def load_quantized_model(checkpoint_path):
 
     model, config = load_model(checkpoint_path)
@@ -54,16 +55,18 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
     model, model_config = loaded_model
     caches = model.create_kv_caches(batches=1)
 
-    tokens = tokenizer.encode(input_text, truncation=True, return_tensors="pt").to(
+    input_tokens = tokenizer.encode(input_text, truncation=True, return_tensors="pt").to(
         device
     )
+    output_tokens = []
+    
     for _ in range(config.max_tokens):
 
         is_cuda = device == "cuda"
         with torch.amp.autocast(
             device_type=device, dtype=torch.bfloat16, enabled=is_cuda
         ):
-            logits = model(tokens)[:, -1, :]
+            logits = model(input_tokens, caches=caches)[:, -1, :]
         logits = logits / max(config.temperature, 1e-5)
 
         v, _ = torch.topk(logits, min(config.top_k, logits.size(-1)))
@@ -71,21 +74,22 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
         probs = torch.softmax(logits, dim=-1)
         next_token = torch.multinomial(probs, num_samples=1)
+        output_tokens.append(next_token.item())
 
         if next_token.item() == tokenizer.eos_token_id:
             break
 
-        tokens = next_token
+        input_tokens = next_token.view(1, 1)
 
-    return tokenizer.decode(tokens[0].tolist())
+    return tokenizer.decode(output_tokens)
 
 
 if __name__ == "__main__":
     checkpoint_dir = Path("checkpoints")
     checkpoint_file = "0.pt"
-    model = load_model(checkpoint_dir / checkpoint_file)
+    # model = load_model(checkpoint_dir / checkpoint_file)
     # model = load_quantized_model(checkpoint_dir / checkpoint_file)
     prompt = input("Enter prompt: ")
     if prompt:
-        output = run_model(prompt, model, max_tokens=1024)
+        output = run_model(prompt, model, max_tokens=256)
         print(output)

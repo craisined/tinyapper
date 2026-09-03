@@ -51,7 +51,7 @@ class Model(nn.Module):
                 batches=batches,
                 max_context=self.max_context,
                 num_heads=num_heads,
-                head_dim=embed_dim // num_heads,
+                head_dim=self.embed_dim // num_heads,
             ) for _ in range(layers)
         ]
         return caches
