@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 EXPOSE 8000
-CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:8000", "--worker-tmp-dir", "/dev/shm", "--chdir", "demos/yapperpedia", "--timeout", "300", "app:app"]
+CMD ["gunicorn", "--workers", "1", "--bind", "0.0.0.0:8000", "--worker-tmp-dir", "/dev/shm", "--chdir", "demos/yapperpedia", "--timeout", "300", "app:app"]

@@ -9,13 +9,26 @@ async function readStream() {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     const outputElement = document.querySelector('.article-content-container');
+    let buffer = '';
 
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
 
-        const chunk = decoder.decode(value, { stream: true });
-        outputElement.innerHTML = chunk;
+        // 2. Extract complete SSE frames separated by double newlines
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop(); // Keep partial trailing chunk in buffer
+
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const rawPayload = line.slice(6);
+                if (rawPayload.trim() === '[DONE]') break;
+                const fullHTML = rawPayload.replace(/\\n/g, '\n');
+                outputElement.innerHTML = fullHTML;
+            }
+        }
     }
 }
 
