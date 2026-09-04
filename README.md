@@ -1,7 +1,6 @@
 # Tinyapper
 
 A 50M parameter large language model made in Pytorch! Can be locally trained, inferenced and tinkered with, and comes with a fun demo (more to come) that generates wikipedia pages. Modelfiles can be found on demo pages as they are too large for Github.
-> **README note for Stardancers**: Yes, I liked the emojis on headers, no, they were not AI generated. I don't think AI would say regex stinks or ask users to try older Python versions at their own risk (⁠╥⁠﹏⁠╥⁠) (will remove this note post ship)
 
 ## Demos!
 
@@ -58,6 +57,7 @@ GPT-2s tokenizer was used for tokenization, and AdamW was used for optimization.
 ## Extra Stuffs
 
 - AI usage was kept to research, debugging, and boilerplate code, as I am trying to work on my Actual Intellegence. An exception was made for RegEx parsing and web streaming because RegEx stinks
+  - README note: Yes, I liked the emojis on headers, no, they were not AI generated. I don't think AI would say regex stinks or ask users to try older Python versions at their own risk (⁠╥⁠﹏⁠╥⁠)
 - Pull requests are appreciated if you ever improve on this!
 - The demo is currently hosted on a CPU only machine D: If I undergo enough boredom/support, future iterations might be on the cloud :O
 - This project was made for Hackclub's Stardance! Feel free to leave a good rating to fund my cloud credit :D
