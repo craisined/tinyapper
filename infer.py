@@ -10,8 +10,7 @@ from model import Model
 
 logger = logging.getLogger(__name__)
 
-device="cpu"
-#device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 tokenizer.truncation_side = "left"
 

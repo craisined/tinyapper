@@ -40,13 +40,16 @@ def stream_inference():
     prompt = data.get("prompt", "")
 
     def generate():
-        total_text = prompt
-        for token in stream_model(prompt, model, max_tokens=512):
+        rendered_text = prompt + "\n"
+        total_text = ""
+        for token in stream_model(prompt + "\n", model, max_tokens=512):
             total_text += token
             if token[-1] == "\n":
-                yield wikitext_to_html(total_text)
-        total_text += "\n= done! ="
-        yield wikitext_to_html(total_text)
+                rendered_text += total_text
+                total_text = ""
+            yield wikitext_to_html(rendered_text) + total_text
+        rendered_text += total_text + "\n= done! ="
+        yield wikitext_to_html(rendered_text)
 
     response = Response(stream_with_context(generate()), mimetype="text/event-stream")
     response.headers["X-Accel-Buffering"] = "no"
