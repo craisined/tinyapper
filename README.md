@@ -30,7 +30,10 @@ python3 app.py
 
 ### Docker Hosting 🐋
 
-CPU works now, but it takes really really long to generate tokens... A container of the demo is published at `ghcr.io/craisined/yapperpedia`!
+A container of the demo is published at `ghcr.io/craisined/yapperpedia`:
+```bash
+docker run -p 8000:8000 ghcr.io/craisined/yapperpedia
+```
 
 ### Raw Inference / Training 🏋️
 
@@ -46,6 +49,10 @@ GPT-2s tokenizer was used for tokenization, and AdamW was used for optimization.
 ## Data 🗂️
 
 [Wikitext-103-raw-v1](https://huggingface.co/datasets/Salesforce/wikitext) was used as a dataset.
+
+## Known Bugs 🐛
+- Streaming on mobile does some weird, weird stuff.
+- EOS is not included in pretraining data
 
 ## Extra Stuffs
 

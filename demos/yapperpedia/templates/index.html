@@ -5,13 +5,15 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>ⓨ🅐ⓟ🅟ⓔ🅡ⓟ🅔ⓓ🅘ⓐ</title>
+    <script src="{{ url_for('static', filename='mobile.js') }}" defer></script>
 </head>
 
 <body class="front-page-container">
     <hgroup>
         <h1>yapperpedia</h1>
         <p>the hallucinated encyclopedia</p>
-        <p> (no money = no cloud = no gpu = no fast, please be patient/rate to fund my cloud compute stardancers :3)</p>
+        <p>(no money = no cloud = no gpu = no fast, please be patient/rate to fund my cloud compute stardancers :3)</p>
+        <p>(also, mobile streaming is jank as sequence length increases, i highly recommend being on desktop for this)</p>
     </hgroup>
     <search class="front-page-search">
         <form action="/search" method="get">
