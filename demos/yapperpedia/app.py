@@ -1,11 +1,19 @@
-from flask import Flask, render_template, redirect, request, url_for
+from flask import (
+    Flask,
+    render_template,
+    redirect,
+    Response,
+    request,
+    stream_with_context,
+    url_for,
+)
 from pathlib import Path
 from parsetokens import wikitext_to_html
 import sys
 
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir.parent.parent))
-from infer import load_model, run_model
+from infer import load_model, stream_model
 
 app = Flask(__name__)
 HOST = "0.0.0.0"
@@ -23,11 +31,28 @@ def index():
 @app.route("/search", methods=["GET"])
 def article():
     topic = request.args.get("query", default=None, type=str)
-    if topic is None:
-        return redirect(url_for("index"))
-    article = run_model(f"= {topic.lower()} =\n", model, max_tokens=128)
-    article = wikitext_to_html(article).lower()
-    return render_template("article.html", title=topic.lower(), page_content=article)
+    return render_template("article.html", title=topic.lower(), query=topic.lower())
+
+
+@app.route("/stream", methods=["POST"])
+def stream_inference():
+    data = request.get_json() or {}
+    prompt = data.get("prompt", "")
+
+    def generate():
+        total_text = prompt
+        for token in stream_model(prompt, model, max_tokens=512):
+            total_text += token
+            if token[-1] == "\n":
+                yield wikitext_to_html(total_text)
+        total_text += "\n= done! ="
+        yield wikitext_to_html(total_text)
+
+    response = Response(stream_with_context(generate()), mimetype="text/event-stream")
+    response.headers["X-Accel-Buffering"] = "no"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Connection"] = "keep-alive"
+    return response
 
 
 @app.route("/about")

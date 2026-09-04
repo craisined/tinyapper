@@ -1,9 +1,15 @@
+<!DOCTYPE html>
 <html>
 
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>{{ title }} - ⓨ🅐ⓟ🅟ⓔ🅡ⓟ🅔ⓓ🅘ⓐ</title>
+    <script>
+        const topic = {{ query|tojson }};
+        const prompt = `= ${topic} =`
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 
 <body>
@@ -16,8 +22,7 @@
             </form>
         </search>
     </nav>
-    <div class="article-content-container">{{ page_content | safe }}</div>
-    <h1></h1>
+    <div class="article-content-container"></div>
 </body>
 
 </html>
