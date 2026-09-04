@@ -43,13 +43,13 @@ def stream_inference():
     def generate():
         rendered_text = prompt + "\n"
         total_text = ""
-        for token in stream_model(prompt + "\n", model, max_tokens=512):
+        for token in stream_model(prompt + "\n", model, max_tokens=900):
             total_text += token
             if token[-1] == "\n":
                 rendered_text += total_text
                 total_text = ""
             yield f"data: {wikitext_to_html(rendered_text) + total_text}\n\n"
-        rendered_text += total_text + "\n= done! ="
+        rendered_text += total_text + "\n= max context! ="
         yield f"data: {wikitext_to_html(rendered_text)}\n\n"
 
     response = Response(stream_with_context(generate()), mimetype="text/event-stream")
