@@ -48,9 +48,9 @@ def stream_inference():
             if token[-1] == "\n":
                 rendered_text += total_text
                 total_text = ""
-            yield f"data: {wikitext_to_html(rendered_text) + total_text}\n\n"
+            yield f"data: {(wikitext_to_html(rendered_text) + total_text).lower()}\n\n"
         rendered_text += total_text + "\n= max context! ="
-        yield f"data: {wikitext_to_html(rendered_text)}\n\n"
+        yield f"data: {(wikitext_to_html(rendered_text)).lower()}\n\n"
 
     response = Response(stream_with_context(generate()), mimetype="text/event-stream")
     response.headers["X-Accel-Buffering"] = "no"
