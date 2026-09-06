@@ -1,11 +1,10 @@
-from datasets import load_dataset
 from pathlib import Path
 import logging
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from time import time
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
 from types import SimpleNamespace
 
 from model import Model
@@ -22,30 +21,23 @@ def train(config=None, **kwargs):
     config_defaults = {
         "checkpoint_dir": "checkpoints",
         "context": 1024,
+        "dataset_path": "wikitext.npy",
         "epochs": 1,
         "grad_norm": 1,
         "grad_steps": 8,
         "microbatch_size": 4,
         "logging_rate": 20,
         "lr": 6e-4,
+        "vocab_size": 50257, # Default GPT 2 tokenization
         "weight_decay": 0.1,
     }
     if config is None:
         config = kwargs
     config = SimpleNamespace(**(config_defaults | config))
 
-    config.checkpoint_dir = Path(config.checkpoint_dir)
-    config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
-    tokenizer = AutoTokenizer.from_pretrained("gpt2")
-    raw_dataset = load_dataset(
-        "Salesforce/wikitext",
-        "wikitext-103-raw-v1",
-        split="train",
-        cache_dir="./dataset_cache",
-    )
-    logger.info("Downloaded dataset!")
-    dataset = TextDataset(raw_dataset, tokenizer, seq_len=config.context)
+    dataset = TextDataset(config.dataset_path, seq_len=config.context)
     dataloader = DataLoader(
         dataset,
         batch_size=config.microbatch_size,
@@ -56,7 +48,7 @@ def train(config=None, **kwargs):
     logger.info("Loaded dataset!")
 
     raw_model = Model(
-        vocab_size=tokenizer.vocab_size,
+        vocab_size=config.vocab_size,
         max_context=config.context,
     ).to(device)
     model = torch.compile(raw_model)
@@ -76,16 +68,17 @@ def train(config=None, **kwargs):
 
     model.train()
 
+    starting_time = time()
     for epoch in range(config.epochs):
         optimizer.zero_grad(set_to_none=True)
-        accum_loss = 0
+        accum_loss = torch.tensor(0.0, device=device)
         for step, (x, y) in enumerate(dataloader):
             x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
             with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
                 logits = model(x)
                 loss = criterion(logits.view(-1, logits.size(-1)), y.view(-1))
                 loss = loss / config.grad_steps
-            accum_loss += loss.item()
+            accum_loss += loss.detach()
             loss.backward()
 
             if step % config.grad_steps == config.grad_steps - 1:
@@ -100,7 +93,7 @@ def train(config=None, **kwargs):
                 step % (config.logging_rate * config.grad_steps)
                 == config.logging_rate * config.grad_steps - 1
             ):
-                logger.info(f"Step: {step + 1} | Loss per token: {accum_loss / config.logging_rate}")
+                logger.info(f"Step: {step + 1} | Loss per token: {accum_loss.item() / config.logging_rate} | Avg time / step: {((time() - starting_time) / (step + 1)):2f}")
                 accum_loss = 0
         
         checkpoint = {
@@ -109,7 +102,7 @@ def train(config=None, **kwargs):
             "optimizer_state": optimizer.state_dict(),
             "config": vars(config)
         }
-        torch.save(checkpoint, config.checkpoint_dir / f"{epoch}.pt")
+        torch.save(checkpoint, Path(config.checkpoint_dir) / f"{epoch}.pt")
         logger.info(f"Saved checkpoint for epoch {epoch + 1}")
 
 if __name__ == "__main__":

@@ -3,6 +3,6 @@ __pycache__
 .venv
 *.log
 *.pt
-dataset_cache
+*.npy
 testing.ipynb
 checkpoints
