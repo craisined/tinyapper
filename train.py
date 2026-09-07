@@ -22,6 +22,7 @@ def train(config=None, **kwargs):
     config_defaults = {
         "checkpoint_dir": "checkpoints",
         "context": 1024,
+        "dataloader_workers": 4,
         "dataset_path": "wikitext.npy",
         "epochs": 1,
         "grad_norm": 1,
@@ -44,8 +45,9 @@ def train(config=None, **kwargs):
         dataset,
         batch_size=config.microbatch_size,
         shuffle=True,
-        num_workers=2,
+        num_workers=config.dataloader_workers,
         pin_memory=True,
+        persistent_workers=True,
     )
     logger.info("Loaded dataset!")
 
@@ -119,4 +121,20 @@ def train(config=None, **kwargs):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="train.log", filemode="w")
-    train()
+    rtx4050_config = {
+        "dataloader_workers": 2,
+        "epochs": 1,
+        "grad_steps": 8
+        "microbatch_size": 4,
+        "logging_rate": 20,
+        "warmup_batches": 200,
+    }
+    l4_config = {
+        "dataloader_workers": 4,
+        "epochs": 5,
+        "grad_steps": 2
+        "microbatch_size": 16,
+        "logging_rate": 50,
+        "warmup_batches": 2000,
+    }
+    train(config=rtx4050_config)
