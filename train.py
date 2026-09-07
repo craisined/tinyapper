@@ -104,7 +104,7 @@ def train(config=None, **kwargs):
                 == config.logging_rate * config.grad_steps - 1
             ):
                 logger.info(
-                    f"Step: {step + 1} | Loss per token: {accum_loss.item() / config.logging_rate} | Avg time / step: {((time() - starting_time) / (step + 1)):2f}"
+                    f"Step: {step + 1} | Loss per token: {accum_loss.item() / config.logging_rate} | Avg time / step: {((time() - starting_time) / (step + 1)):.2f}"
                 )
                 accum_loss.zero_()
 
