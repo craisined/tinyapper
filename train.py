@@ -43,7 +43,7 @@ def train(config=None, **kwargs):
         "logging_rate": 20,
         "lr": 6e-4,
         "val_dataset_file": "wikitext_val.npy",
-        "vocab_size": 50257,  # Default GPT 2 tokenization
+        "vocab_size": 50260,  # Default GPT 2 tokenization + user + assistant + pad
         "warmup_batches": 200,
         "weight_decay": 0.1,
     }
