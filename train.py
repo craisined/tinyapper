@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from time import time
 from torch.utils.data import DataLoader
+from transformers import get_cosine_schedule_with_warmup
 from types import SimpleNamespace
 
 from model import Model
@@ -28,7 +29,8 @@ def train(config=None, **kwargs):
         "microbatch_size": 4,
         "logging_rate": 20,
         "lr": 6e-4,
-        "vocab_size": 50257, # Default GPT 2 tokenization
+        "vocab_size": 50257,  # Default GPT 2 tokenization
+        "warmup_batches": 200,
         "weight_decay": 0.1,
     }
     if config is None:
@@ -66,6 +68,12 @@ def train(config=None, **kwargs):
     )
     criterion = nn.CrossEntropyLoss()
 
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer=optimizer,
+        num_warmup_steps=config.warmup_batches,
+        num_training_steps=config.epochs * (len(dataloader) // config.grad_steps),
+    )
+
     model.train()
 
     starting_time = time()
@@ -85,25 +93,29 @@ def train(config=None, **kwargs):
                 norm = nn.utils.clip_grad_norm_(
                     model.parameters(), max_norm=config.grad_norm
                 )
-                # TODO: variable learning
                 optimizer.step()
                 optimizer.zero_grad(set_to_none=True)
+                scheduler.step()
 
             if (
                 step % (config.logging_rate * config.grad_steps)
                 == config.logging_rate * config.grad_steps - 1
             ):
-                logger.info(f"Step: {step + 1} | Loss per token: {accum_loss.item() / config.logging_rate} | Avg time / step: {((time() - starting_time) / (step + 1)):2f}")
-                accum_loss = 0
-        
+                logger.info(
+                    f"Step: {step + 1} | Loss per token: {accum_loss.item() / config.logging_rate} | Avg time / step: {((time() - starting_time) / (step + 1)):2f}"
+                )
+                accum_loss.zero_()
+
         checkpoint = {
             "epoch": epoch + 1,
             "model_state": raw_model.state_dict(),
+            "scheduler_state": scheduler.state_dict(),
             "optimizer_state": optimizer.state_dict(),
-            "config": vars(config)
+            "config": vars(config),
         }
         torch.save(checkpoint, Path(config.checkpoint_dir) / f"{epoch}.pt")
         logger.info(f"Saved checkpoint for epoch {epoch + 1}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="train.log", filemode="w")
