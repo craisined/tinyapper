@@ -34,14 +34,15 @@ def train(config=None, **kwargs):
         "checkpoint_dir": "checkpoints",
         "context": 1024,
         "dataloader_workers": 4,
-        "dataset_path": "wikitext.npy",
-        "val_dataset_path": "wikitext_val.npy",
+        "dataset_dir": "datasets",
+        "dataset_file": "wikitext.npy",
         "epochs": 1,
         "grad_norm": 1,
         "grad_steps": 8,
         "microbatch_size": 4,
         "logging_rate": 20,
         "lr": 6e-4,
+        "val_dataset_file": "wikitext_val.npy",
         "vocab_size": 50257,  # Default GPT 2 tokenization
         "warmup_batches": 200,
         "weight_decay": 0.1,
@@ -52,7 +53,7 @@ def train(config=None, **kwargs):
 
     Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
-    dataset = TextDataset(config.dataset_path, seq_len=config.context)
+    dataset = TextDataset(Path(config.dataset_dir) / config.dataset_file, seq_len=config.context)
     dataloader = DataLoader(
         dataset,
         batch_size=config.microbatch_size,
@@ -62,7 +63,7 @@ def train(config=None, **kwargs):
         pin_memory=True,
         persistent_workers=True,
     )
-    val_dataset = TextDataset(config.val_dataset_path, seq_len=config.context)
+    val_dataset = TextDataset(Path(config.dataset_dir) / config.val_dataset_file, seq_len=config.context)
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=config.microbatch_size,
