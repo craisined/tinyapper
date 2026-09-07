@@ -9,12 +9,13 @@ from transformers import get_cosine_schedule_with_warmup
 from types import SimpleNamespace
 
 from model import Model
-from dataset import TextDataset
+from dataset import TextDataset, ResponseDataset
 
 logger = logging.getLogger(__name__)
 
 assert torch.cuda.is_available(), "CUDA GPU required for training."
 device = "cuda"
+
 
 def val(model, val_data, criterion):
 
@@ -24,9 +25,12 @@ def val(model, val_data, criterion):
         x, y = x.to(device), y.to(device)
         with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
             logits = model(x)
-            total_loss += criterion(logits.view(-1, logits.size(-1)), y.view(-1)).detach()   
+            total_loss += criterion(
+                logits.view(-1, logits.size(-1)), y.view(-1)
+            ).detach()
     model.train()
     return total_loss.item() / len(val_data)
+
 
 def train(config=None, **kwargs):
 
@@ -36,12 +40,15 @@ def train(config=None, **kwargs):
         "dataloader_workers": 4,
         "dataset_dir": "datasets",
         "dataset_file": "wikitext.npy",
+        "dataset_type": "text",
         "epochs": 1,
         "grad_norm": 1,
         "grad_steps": 8,
         "microbatch_size": 4,
+        "model_file": None,
         "logging_rate": 20,
         "lr": 6e-4,
+        "pad_token": 50257,
         "val_dataset_file": "wikitext_val.npy",
         "vocab_size": 50260,  # Default GPT 2 tokenization + user + assistant + pad
         "warmup_batches": 200,
@@ -53,7 +60,10 @@ def train(config=None, **kwargs):
 
     Path(config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
 
-    dataset = TextDataset(Path(config.dataset_dir) / config.dataset_file, seq_len=config.context)
+    DatasetClass = TextDataset if config.dataset_type == "text" else ResponseDataset
+    dataset = DatasetClass(
+        Path(config.dataset_dir) / config.dataset_file, seq_len=config.context
+    )
     dataloader = DataLoader(
         dataset,
         batch_size=config.microbatch_size,
@@ -63,7 +73,9 @@ def train(config=None, **kwargs):
         pin_memory=True,
         persistent_workers=True,
     )
-    val_dataset = TextDataset(Path(config.dataset_dir) / config.val_dataset_file, seq_len=config.context)
+    val_dataset = DatasetClass(
+        Path(config.dataset_dir) / config.val_dataset_file, seq_len=config.context
+    )
     val_dataloader = DataLoader(
         val_dataset,
         batch_size=config.microbatch_size,
@@ -79,6 +91,12 @@ def train(config=None, **kwargs):
         vocab_size=config.vocab_size,
         max_context=config.context,
     ).to(device)
+    if config.model_file:
+        state_dict = torch.load(Path(config.checkpoint_dir) / config.model_file)[
+            "model_state"
+        ]
+        raw_model.load_state_dict(state_dict)
+        logger.info("Got model from checkpoint!")
     model = torch.compile(raw_model)
     logger.info("Loaded model!")
 
@@ -92,7 +110,7 @@ def train(config=None, **kwargs):
     optimizer = torch.optim.AdamW(
         optim_groups, lr=config.lr, betas=(0.9, 0.95), eps=1e-8
     )
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(ignore_index=config.pad_token)
 
     scheduler = get_cosine_schedule_with_warmup(
         optimizer=optimizer,
@@ -164,4 +182,12 @@ if __name__ == "__main__":
         "logging_rate": 50,
         "warmup_batches": 2000,
     }
-    train(config=rtx4050_config)
+    rtx4050_ft = rtx4050_config | {
+        "epochs": 1,
+        "lr": 1e-4,
+        "model_file": "pretrained.pt",
+        "dataset_type": "response",
+        "dataset_file": "ultrachat.npy",
+        "val_dataset_file": "ultrachat_val.npy"
+    }
+    train(config=rtx4050_ft)
