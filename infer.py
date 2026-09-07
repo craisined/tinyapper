@@ -19,7 +19,7 @@ def load_model(checkpoint_path):
 
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     config = SimpleNamespace(**checkpoint["config"])
-    model = Model(vocab_size=tokenizer.vocab_size, max_context=config.context).to(
+    model = Model(vocab_size=config.vocab_size, max_context=config.context).to(
         device
     )
     unwrapped_state_dict = {

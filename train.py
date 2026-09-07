@@ -150,7 +150,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="train.log", filemode="w")
     rtx4050_config = {
         "dataloader_workers": 2,
-        "epochs": 1,
+        "epochs": 5,
         "grad_steps": 8,
         "microbatch_size": 4,
         "logging_rate": 20,

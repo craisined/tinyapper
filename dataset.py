@@ -11,7 +11,7 @@ transformers.logging.set_verbosity_error()
 
 
 # TODO: add eos
-def tokenize_dataset(raw_dataset, tokenizer, save_path="wikitext.npy"):
+def tokenize_text_dataset(raw_dataset, tokenizer, save_path="datasets/wikitext.npy"):
 
     all_tokens = []
     for idx, item in enumerate(raw_dataset):
@@ -24,6 +24,35 @@ def tokenize_dataset(raw_dataset, tokenizer, save_path="wikitext.npy"):
         all_tokens.extend(tokens)
 
     np.save(save_path, np.array(all_tokens, dtype=np.int32))
+
+def tokenize_response_dataset(raw_dataset, tokenizer, seq_len=1024, save_path="datasets/ultrachat.npy"):
+
+    examples = []
+    msg_text = ""
+    for idx, item in enumerate(raw_dataset):
+        if idx % 10_000 == 0:
+            print(f"Tokenizing sample number {idx}")
+        msg_tokens = []
+        for message in item["messages"]:
+            if message["role"] == "assistant":
+                msg_tokens.extend(tokenizer.encode(msg_text, truncation=False)[:seq_len])
+                x = msg_tokens[:]
+                msg_text = ""
+                x += [tokenizer.pad_token_id] * (seq_len - len(x))
+            msg_text += "<|user|>:\n" if message["role"] == "user" else ""
+            msg_text += message["content"]
+            msg_text += "<|assistant|>:\n" if message["role"] == "user" else tokenizer.eos_token
+            if message["role"] == "assistant":
+                msg_tokens.extend(tokenizer.encode(msg_text, truncation=False))
+                y = msg_tokens[:]
+                msg_text = ""
+                if len(y) <= seq_len:
+                    y += [tokenizer.pad_token_id] * (seq_len - len(y))
+                    examples.append([x, y])
+                else:
+                    break
+    
+    np.save(save_path, np.array(examples))
 
 
 class TextDataset(Dataset):
