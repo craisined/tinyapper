@@ -34,7 +34,7 @@ python3 app.py
 
 A container of the demo is published at `ghcr.io/craisined/yapperpedia`:
 ```bash
-curl -o static/yapperpedia.pt https://yapperpedia.craisin.tech/static/yapperpedia.pt
+curl -o yapperpedia.pt https://yapperpedia.craisin.tech/static/yapperpedia.pt
 docker run -p 8000:8000 -v ./yapperpedia.pt:/app/demos/yapperpedia/static/yapperpedia.pt ghcr.io/craisined/yapperpedia:latest
 ```
 
