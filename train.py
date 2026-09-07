@@ -13,17 +13,29 @@ from dataset import TextDataset
 
 logger = logging.getLogger(__name__)
 
+assert torch.cuda.is_available(), "CUDA GPU required for training."
+device = "cuda"
+
+def val(model, val_data, criterion):
+
+    model.eval()
+    total_loss = torch.tensor(0.0, device=device)
+    for x, y in val_data:
+        x, y = x.to(device), y.to(device)
+        with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
+            logits = model(x)
+            total_loss += criterion(logits.view(-1, logits.size(-1)), y.view(-1)).detach()   
+    model.train()
+    return total_loss.item() / len(val_data)
 
 def train(config=None, **kwargs):
-
-    assert torch.cuda.is_available(), "CUDA GPU required for training."
-    device = "cuda"
 
     config_defaults = {
         "checkpoint_dir": "checkpoints",
         "context": 1024,
         "dataloader_workers": 4,
         "dataset_path": "wikitext.npy",
+        "val_dataset_path": "wikitext_val.npy",
         "epochs": 1,
         "grad_norm": 1,
         "grad_steps": 8,
@@ -44,6 +56,17 @@ def train(config=None, **kwargs):
     dataloader = DataLoader(
         dataset,
         batch_size=config.microbatch_size,
+        drop_last=True,
+        shuffle=True,
+        num_workers=config.dataloader_workers,
+        pin_memory=True,
+        persistent_workers=True,
+    )
+    val_dataset = TextDataset(config.val_dataset_path, seq_len=config.context)
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=config.microbatch_size,
+        drop_last=True,
         shuffle=True,
         num_workers=config.dataloader_workers,
         pin_memory=True,
@@ -108,6 +131,9 @@ def train(config=None, **kwargs):
                 )
                 accum_loss.zero_()
 
+        validation_loss = val(model, val_dataloader, criterion)
+        logger.info(f"Validation loss for {epoch + 1}: {validation_loss:.2f}")
+
         checkpoint = {
             "epoch": epoch + 1,
             "model_state": raw_model.state_dict(),
@@ -124,7 +150,7 @@ if __name__ == "__main__":
     rtx4050_config = {
         "dataloader_workers": 2,
         "epochs": 1,
-        "grad_steps": 8
+        "grad_steps": 8,
         "microbatch_size": 4,
         "logging_rate": 20,
         "warmup_batches": 200,
@@ -132,7 +158,7 @@ if __name__ == "__main__":
     l4_config = {
         "dataloader_workers": 4,
         "epochs": 5,
-        "grad_steps": 2
+        "grad_steps": 2,
         "microbatch_size": 16,
         "logging_rate": 50,
         "warmup_batches": 2000,
