@@ -54,7 +54,6 @@ GPT-2s tokenizer was used for tokenization, and AdamW was used for optimization.
 [Wikitext-103-raw-v1](https://huggingface.co/datasets/Salesforce/wikitext) was used as a dataset.
 
 ## Known Bugs
-- Streaming on mobile does some weird, weird stuff.
 - EOS is not included in pretraining data
 
 ## Extra Stuffs
