@@ -51,10 +51,9 @@ GPT-2s tokenizer was used for tokenization, and AdamW was used for optimization.
 
 ## Data
 
-[Wikitext-103-raw-v1](https://huggingface.co/datasets/Salesforce/wikitext) was used as a dataset.
+- [Wikitext-103-raw-v1](https://huggingface.co/datasets/Salesforce/wikitext) for pretraining and yapperpedia
+- [Ultrachat-200k](https://huggingface.co/datasets/HuggingFaceH4/ultrachat_200k) for conversation tuning
 
-## Known Bugs
-- EOS is not included in pretraining data
 
 ## Extra Stuffs
 
