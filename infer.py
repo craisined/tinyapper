@@ -13,15 +13,19 @@ logger = logging.getLogger(__name__)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 tokenizer.truncation_side = "left"
+tokenizer.add_special_tokens(
+    {
+        "pad_token": "<|pad|>",
+        "additional_special_tokens": ["\n<|user|>:\n", "\n<|assistant|>:\n"],
+    }
+)
 
 
 def load_model(checkpoint_path):
 
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     config = SimpleNamespace(**checkpoint["config"])
-    model = Model(vocab_size=config.vocab_size, max_context=config.context).to(
-        device
-    )
+    model = Model(vocab_size=config.vocab_size, max_context=config.context).to(device)
     unwrapped_state_dict = {
         k.replace("_orig_mod.", ""): v for k, v in checkpoint["model_state"].items()
     }
@@ -83,6 +87,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
         input_tokens = next_token.view(1, 1)
 
     return input_text + tokenizer.decode(output_tokens)
+
 
 @torch.no_grad()
 def stream_model(input_text, loaded_model, config=None, **kwargs):
