@@ -6,4 +6,34 @@ body {
     font-weight: 400;
     font-size: 1.5rem;
     margin: 0;
+    height: 100svh;
+}
+
+.chat-container {
+    height: calc(100% - 3rem - 6px);
+}
+
+.input-container {
+    height: 3rem;
+    display: flex;
+    border-top-style: solid;
+}
+
+.input-container > input {
+    flex: 1;
+    font-family: "Comic Relief", sans-serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    text-transform: lowercase;
+    border-style: none;
+    outline: none;
+    padding-left: 8px;
+}
+
+
+.input-container > button {
+    width: 64px;
+    border-style: none;
+    background-color: transparent;
+    font-size: 1.5rem;
 }
