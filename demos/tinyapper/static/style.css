@@ -11,6 +11,7 @@ body {
 
 .chat-container {
     height: calc(100% - 3rem - 6px);
+    overflow: scroll;
 }
 
 .message-container {
