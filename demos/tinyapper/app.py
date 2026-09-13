@@ -18,18 +18,18 @@ def index():
 
 @socketio.on('connect')
 def connect():
-    print(request.sid())
+    print(request.sid)
 
 @socketio.event
 def chat(data):
-    request_id = request.sid()
+    request_id = request.sid
     prompt = f"<|user|>\n{data.get('prompt')}<|assistant|>\n"
     output = run_model(prompt, model)
     emit("output", {"msg": output})
 
 @socketio.on('disconnect')
 def connect():
-    print(request.sid())
+    print(request.sid)
 
 if __name__=="__main__":
     socketio.run(app, host='0.0.0.0', port=8000)
