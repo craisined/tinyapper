@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, url_for
 from flask_socketio import SocketIO, emit
 from pathlib import Path
+import sys
 
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir.parent.parent))
