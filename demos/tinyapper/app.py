@@ -32,4 +32,4 @@ def connect():
     print(request.sid())
 
 if __name__=="__main__":
-    socketio.run()
+    socketio.run(app)
