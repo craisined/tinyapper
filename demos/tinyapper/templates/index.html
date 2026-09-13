@@ -3,7 +3,11 @@
 
 <head>
     <title>tinyapper</title>
-    <link rel="stylesheet" href="/proxy/8000/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"
+        integrity="sha384-kzavj5fiMwLKzzD1f8S7TeoVIEi7uKHvbTA3ueZkrzYq75pNQUiUi6Dy98Q3fxb0"
+        crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
 </head>
 
 <body>

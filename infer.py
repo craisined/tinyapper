@@ -86,7 +86,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
         input_tokens = next_token.view(1, 1)
 
-    return input_text + tokenizer.decode(output_tokens)
+    return tokenizer.decode(output_tokens)
 
 
 @torch.no_grad()
