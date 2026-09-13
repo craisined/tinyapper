@@ -118,11 +118,11 @@ class SelfAttention(nn.Module):
         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
 
         if cache is not None:
-            k, v = cache.push(k, v)
+            k, v, mask = cache.push(k, v)
 
         attn_out = F.scaled_dot_product_attention(
-            q, k, v, is_causal=(T > 1)
-        )  # TODO: custom mask for multiple fills
+            q, k, v, attn_mask=mask
+        )
 
         attn_out = attn_out.transpose(1, 2).contiguous().view(B, T, C)
         return self.out_proj(attn_out)
@@ -158,8 +158,16 @@ class KVCache(nn.Module):
             "v_cache", torch.zeros(shape, dtype=dtype), persistent=False
         )
 
+    def create_mask(self, k, v):
+        device = k.device
+        past_mask = torch.ones((k.shape[2], self.total_tokens), dtype=torch.bool, device=device)
+        present_mask = torch.tril(torch.ones((k.shape[2], k.shape[2]), dtype=torch.bool, device=device))
+        full_mask = torch.cat([past_mask, present_mask], dim=1)
+        return full_mask
+
     def push(self, k, v):
 
+        mask = self.create_mask(k, v)
         tokens = k.shape[2]
         end_idx = self.total_tokens + tokens
         self.k_cache[:, :, self.total_tokens : end_idx] = k
@@ -168,6 +176,7 @@ class KVCache(nn.Module):
         return (
             self.k_cache[:, :, : self.total_tokens],
             self.v_cache[:, :, : self.total_tokens],
+            mask
         )
 
     def reset(self):
