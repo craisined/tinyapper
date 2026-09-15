@@ -19,6 +19,7 @@ body {
     padding: 8px;
     border-style: solid;
     display: inline-block;
+    text-transform: lowercase;
 }
 
 .input-container {

@@ -79,10 +79,10 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
         probs = torch.softmax(logits, dim=-1)
         next_token = torch.multinomial(probs, num_samples=1)
-        output_tokens.append(next_token.item())
 
         if next_token.item() == tokenizer.eos_token_id:
             break
+        output_tokens.append(next_token.item())
 
         input_tokens = next_token.view(1, 1)
 
