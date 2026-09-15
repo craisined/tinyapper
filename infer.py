@@ -48,6 +48,7 @@ def load_quantized_model(checkpoint_path):
 def run_model(input_text, loaded_model, config=None, **kwargs):
 
     config_defaults = {
+        "cache": None,
         "max_tokens": 1024,
         "temperature": 0.8,
         "top_k": 40,
@@ -58,7 +59,11 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 
     model, model_config = loaded_model
     cache_dtype = torch.bfloat16 if device == "cuda" else torch.float32
-    caches = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
+    caches = (
+        model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
+        if config.cache is None
+        else config.cache
+    )
 
     input_tokens = tokenizer.encode(
         input_text, truncation=True, return_tensors="pt"
@@ -93,6 +98,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
 def stream_model(input_text, loaded_model, config=None, **kwargs):
 
     config_defaults = {
+        "cache": None,
         "max_tokens": 1024,
         "temperature": 0.8,
         "top_k": 40,
@@ -104,7 +110,11 @@ def stream_model(input_text, loaded_model, config=None, **kwargs):
 
     model, model_config = loaded_model
     cache_dtype = torch.bfloat16 if is_cuda else torch.float32
-    caches = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
+    caches = (
+        model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
+        if config.cache is None
+        else config.cache
+    )
 
     input_tokens = tokenizer.encode(
         input_text, truncation=True, return_tensors="pt"
