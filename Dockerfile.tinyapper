@@ -10,5 +10,6 @@ RUN pip install --no-cache-dir torch==2.13 --index-url https://download.pytorch.
     && pip install --no-cache-dir -r requirements.txt
 COPY . .
 
+WORKDIR demos/tinyapper
 EXPOSE 8000
 CMD ["python3", "app.py"]
