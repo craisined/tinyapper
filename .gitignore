@@ -4,6 +4,7 @@ __pycache__
 *.log
 *.pt
 *.npy
-testing.ipynb
+testing.*
 checkpoints
 datasets
+.env
