@@ -30,7 +30,7 @@ def chat(data):
     request_id = request.sid
     cache = caches[request_id]
     prompt = f"<|user|>\n{data.get('prompt')}<|assistant|>\n"
-    output = run_model(prompt, (model, model_config), cache=cache, max_tokens=1023-cache[0].total_tokens)
+    output = run_model(prompt, (model, model_config), cache=cache, max_tokens=1024-cache[0].total_tokens)
     emit("output", {"msg": output})
     if cache[0].total_tokens > 768:
         emit("output", {"msg": "cache more than 3/4 full, creating new cache"})
