@@ -28,9 +28,13 @@ def connect():
 @socketio.event
 def chat(data):
     request_id = request.sid
+    cache = caches[request_id]
     prompt = f"<|user|>\n{data.get('prompt')}<|assistant|>\n"
-    output = run_model(prompt, (model, model_config), cache=caches[request_id])
+    output = run_model(prompt, (model, model_config), cache=cache, max_tokens=1024-cache.total_tokens)
     emit("output", {"msg": output})
+    if cache.total_tokens > 768:
+        emit("output", {"msg": "cache more than 3/4 full, creating new cache"})
+        caches[request_id] = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
 
 @socketio.on('disconnect')
 def connect():

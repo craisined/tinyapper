@@ -70,7 +70,7 @@ def run_model(input_text, loaded_model, config=None, **kwargs):
     ).to(device)
     output_tokens = []
 
-    for _ in range(config.max_tokens):
+    for _ in range(config.max_tokens - len(input_tokens)):
 
         is_cuda = device == "cuda"
         with torch.amp.autocast(
