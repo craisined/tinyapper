@@ -14,6 +14,7 @@ socketio = SocketIO(app)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, model_config = load_model(current_dir / "static" / "tinyapper.pt")
 caches = {}
+cache_dtype = torch.bfloat16 if device == "cuda" else torch.float32
 
 @app.route("/")
 def index():
@@ -22,7 +23,6 @@ def index():
 @socketio.on('connect')
 def connect():
     request_id = request.sid
-    cache_dtype = torch.bfloat16 if device == "cuda" else torch.float32
     caches[request_id] = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
 
 @socketio.event
@@ -30,9 +30,9 @@ def chat(data):
     request_id = request.sid
     cache = caches[request_id]
     prompt = f"<|user|>\n{data.get('prompt')}<|assistant|>\n"
-    output = run_model(prompt, (model, model_config), cache=cache, max_tokens=1024-cache.total_tokens)
+    output = run_model(prompt, (model, model_config), cache=cache, max_tokens=1023-cache[0].total_tokens)
     emit("output", {"msg": output})
-    if cache.total_tokens > 768:
+    if cache[0].total_tokens > 768:
         emit("output", {"msg": "cache more than 3/4 full, creating new cache"})
         caches[request_id] = model.create_kv_caches(batches=1, device=device, dtype=cache_dtype)
 
