@@ -6,9 +6,13 @@ A 50M parameter large language model made in Pytorch! Can be locally trained, in
 
 ## Demos!
 
+### Tinyapper
+![](/demos/images/tinyapper.png)
+Tinyapper's flagship conversational model (the other model isn't conversational)! Try it out at https://tinyapper.craisin.tech!
+
 ### Yapperpedia
 
-<img src="demos/images/yapperpedia.png" alt="Yapperpedia Website" width="400"><br>
+![](/demos/images/yapperpedia.png)
 Tinyapper's pretraining generator completes a heading, generating a fake Wikipedia article. Try it out at https://yapperpedia.craisin.tech!
 
 ## Local Deployment
@@ -19,6 +23,15 @@ Developed with Python 3.13, use older versions at your own risk:
 ```bash
 git clone https://github.com/craisined/tinyapper.git
 pip install -r requirements.txt # use a virtual environment if desired
+```
+
+### Tinyapper
+
+This hosts a server on port 8000:
+```bash
+cd demos/tinyapper
+curl -o static/tinyapper.pt https://tinyapper.craisin.tech/static/tinyapper.pt
+python3 app.py
 ```
 
 ### Yapperpedia
@@ -32,7 +45,17 @@ python3 app.py
 
 ### Docker Hosting
 
-A container of the demo is published at `ghcr.io/craisined/yapperpedia`:
+Containers of the demos is published at `ghcr.io/craisined/tinyapper` and `ghcr.io/craisined/yapperpedia`.
+
+#### Tinyapper
+
+```bash
+curl -o tinyapper.pt https://yapperpedia.craisin.tech/static/tinyapper.pt
+docker run -p 8000:8000 -v ./tinyapper.pt:/app/demos/tinyapper/static/tinyapper.pt ghcr.io/craisined/tinyapper:latest
+```
+
+#### Yapperpedia
+
 ```bash
 curl -o yapperpedia.pt https://yapperpedia.craisin.tech/static/yapperpedia.pt
 docker run -p 8000:8000 -v ./yapperpedia.pt:/app/demos/yapperpedia/static/yapperpedia.pt ghcr.io/craisined/yapperpedia:latest
